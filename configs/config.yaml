@@ -1,0 +1,27 @@
+ssh:
+  user: admin
+  timeout: 10s
+  known_hosts: ~/.ssh/known_hosts
+  strict_host_key_checking: true
+  auth:
+    type: key
+    private_key: ~/.ssh/eltex
+
+
+executor:
+  workers: 20
+  retry:
+    attempts: 3
+    delay: 2s
+
+
+inventory:
+  file: ../inventory/hosts.yaml
+
+
+commands:
+  file: ../commands/commands.yaml
+
+output:
+  format: text
+  file: ../output/result.txt

@@ -1,0 +1,15 @@
+devices:
+
+  - name: router-01
+    address: 10.10.1.1
+    port: 22
+    username: admin
+    tags:
+      - router
+      - core
+
+  - name: switch-01
+    address: 10.10.1.2
+    tags:
+      - switch
+      - access
