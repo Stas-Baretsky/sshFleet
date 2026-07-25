@@ -1,4 +1,2 @@
 commands:
-  - show version
-
-  - show interfaces status
+  - show run

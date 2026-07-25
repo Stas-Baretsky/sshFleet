@@ -40,13 +40,10 @@ func BuildConfig(
 	return &gossh.ClientConfig{
 
 		User: cfg.User,
-
 		Auth: []gossh.AuthMethod{
 			auth,
 		},
-
 		HostKeyCallback: callback,
-
-		Timeout: cfg.Timeout,
+		Timeout:         cfg.Timeout,
 	}, nil
 }

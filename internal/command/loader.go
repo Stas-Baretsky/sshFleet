@@ -35,20 +35,17 @@ func Load(
 	)
 
 	if err != nil {
-
 		return nil, fmt.Errorf(
 			"parse commands yaml: %w",
 			err,
 		)
 	}
-
 	if err := validate(
 		commands.Commands,
 	); err != nil {
 
 		return nil, err
 	}
-
 	return commands.Commands, nil
 }
 
@@ -57,7 +54,6 @@ func validate(
 ) error {
 
 	if len(commands) == 0 {
-
 		return fmt.Errorf(
 			"commands list is empty",
 		)
@@ -66,14 +62,11 @@ func validate(
 	for i, cmd := range commands {
 
 		if cmd == "" {
-
 			return fmt.Errorf(
 				"command[%d] is empty",
 				i,
 			)
 		}
-
 	}
-
 	return nil
 }

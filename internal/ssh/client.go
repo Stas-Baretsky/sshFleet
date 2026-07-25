@@ -11,24 +11,19 @@ import (
 )
 
 type Client struct {
-	config *gossh.ClientConfig
-
+	config  *gossh.ClientConfig
 	timeout time.Duration
 }
 
 type Target struct {
-	Name string
-
+	Name    string
 	Address string
-
-	Port int
-
-	User string
+	Port    int
+	User    string
 }
 
 type Connection struct {
 	client *gossh.Client
-
 	target Target
 }
 
@@ -38,9 +33,7 @@ func NewClient(
 ) *Client {
 
 	return &Client{
-
-		config: config,
-
+		config:  config,
 		timeout: timeout,
 	}
 }
@@ -61,13 +54,10 @@ func (c *Client) Connect(
 	// он имеет приоритет над глобальным
 	//
 	if target.User != "" {
-
 		config.User = target.User
-
 	}
 
 	dialer := net.Dialer{
-
 		Timeout: c.timeout,
 	}
 
@@ -78,7 +68,6 @@ func (c *Client) Connect(
 	)
 
 	if err != nil {
-
 		return nil, fmt.Errorf(
 			"dial %s: %w",
 			address,
@@ -110,9 +99,7 @@ func (c *Client) Connect(
 	)
 
 	return &Connection{
-
 		client: client,
-
 		target: target,
 	}, nil
 }
@@ -120,7 +107,6 @@ func (c *Client) Connect(
 func (c *Connection) NewSession() (*Session, error) {
 
 	session, err := c.client.NewSession()
-
 	if err != nil {
 
 		return nil, fmt.Errorf(
@@ -130,11 +116,8 @@ func (c *Connection) NewSession() (*Session, error) {
 	}
 
 	return &Session{
-
 		session: session,
-
-		host: c.target.Name,
-
+		host:    c.target.Name,
 		address: normalizeAddress(
 			c.target,
 		),
@@ -142,15 +125,12 @@ func (c *Connection) NewSession() (*Session, error) {
 }
 
 func (c *Connection) Close() error {
-
 	return c.client.Close()
-
 }
 
 func normalizeAddress(
 	target Target,
 ) string {
-
 	port := target.Port
 
 	if port == 0 {

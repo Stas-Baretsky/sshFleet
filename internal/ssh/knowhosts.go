@@ -26,7 +26,6 @@ func makeHostKeyCallback(
 	}
 
 	if path == "" {
-
 		return nil, fmt.Errorf(
 			"known_hosts path is empty",
 		)
@@ -37,7 +36,6 @@ func makeHostKeyCallback(
 	)
 
 	if err != nil {
-
 		return nil, fmt.Errorf(
 			"create knownhosts callback: %w",
 			err,

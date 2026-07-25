@@ -15,24 +15,18 @@ func BuildAuth(
 	switch cfg.Type {
 
 	case "key":
-
 		return buildKeyAuth(
 			cfg,
 		)
-
 	case "password":
-
 		return buildPasswordAuth(
 			cfg.Password,
 		)
-
 	default:
-
 		return nil, fmt.Errorf(
 			"unsupported ssh auth type: %q",
 			cfg.Type,
 		)
-
 	}
 }
 
@@ -66,7 +60,6 @@ func buildKeyAuth(
 	// Незашифрованный ключ
 	//
 	if cfg.Passphrase == "" {
-
 		signer, err = gossh.ParsePrivateKey(
 			keyData,
 		)

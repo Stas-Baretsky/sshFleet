@@ -44,16 +44,12 @@ func NewWriter(
 	)
 
 	if err != nil {
-
 		file.Close()
-
 		return nil, err
 	}
 
 	return &Writer{
-
-		file: file,
-
+		file:      file,
 		formatter: formatter,
 	}, nil
 }
@@ -62,49 +58,32 @@ func (w *Writer) Write(
 	ctx context.Context,
 	results <-chan sshclient.Result,
 ) error {
-
 	for {
-
 		select {
-
 		case <-ctx.Done():
-
 			return ctx.Err()
 
 		case result, ok := <-results:
-
 			if !ok {
-
 				return nil
-
 			}
-
 			data, err := w.formatter.Write(
 				result,
 			)
-
 			if err != nil {
-
 				return err
-
 			}
-
 			_, err = w.file.Write(
 				data,
 			)
-
 			if err != nil {
-
 				return fmt.Errorf(
 					"write result: %w",
 					err,
 				)
 			}
-
 		}
-
 	}
-
 }
 
 func (w *Writer) Close() error {
