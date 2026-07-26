@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	gossh "golang.org/x/crypto/ssh"
@@ -69,18 +70,23 @@ func (s *Session) Run(
 
 	case err := <-done:
 		if err != nil {
+			// Некоторые сетевые устройства (например, Eltex)
+			// не отправляют exit-status после exec.
+			// Если stderr пустой и stdout получен,
+			// считаем выполнение успешным.
+			if stderr.Len() == 0 &&
+				stdout.Len() > 0 &&
+				strings.Contains(err.Error(), "without exit status") {
 
-			if stderr.Len() > 0 {
-				result.Error = fmt.Errorf(
-					"%w: %s",
-					err,
-					stderr.String(),
-				)
-			} else {
-				result.Error = fmt.Errorf(
-					"execute command: %w",
-					err,
-				)
+				err = nil
+			}
+
+			if err != nil {
+				if stderr.Len() > 0 {
+					result.Error = fmt.Errorf("%w: %s", err, stderr.String())
+				} else {
+					result.Error = fmt.Errorf("execute command: %w", err)
+				}
 			}
 		}
 	}
@@ -89,6 +95,113 @@ func (s *Session) Run(
 
 	return result
 }
+
+// func (s *Session) Run(ctx context.Context, command string) Result {
+// 	start := time.Now()
+
+// 	result := Result{
+// 		Host:    s.host,
+// 		Command: command,
+// 	}
+
+// 	out, err := s.session.CombinedOutput(command)
+
+// 	result.Output = string(out)
+// 	result.Duration = time.Since(start)
+
+// 	if err != nil {
+// 		result.Error = err
+// 	}
+
+// 	return result
+// }
+
+// func (s *Session) Run(
+// 	ctx context.Context,
+// 	command string,
+// ) Result {
+
+// 	start := time.Now()
+
+// 	result := Result{
+// 		Host:    s.host,
+// 		Command: command,
+// 	}
+
+// 	stdoutPipe, err := s.session.StdoutPipe()
+// 	if err != nil {
+// 		result.Error = fmt.Errorf("stdout pipe: %w", err)
+// 		return result
+// 	}
+
+// 	stderrPipe, err := s.session.StderrPipe()
+// 	if err != nil {
+// 		result.Error = fmt.Errorf("stderr pipe: %w", err)
+// 		return result
+// 	}
+
+// 	if err := s.session.Start(command); err != nil {
+// 		result.Error = fmt.Errorf("start command: %w", err)
+// 		return result
+// 	}
+
+// 	var stdout bytes.Buffer
+// 	var stderr bytes.Buffer
+
+// 	var wg sync.WaitGroup
+// 	wg.Add(2)
+
+// 	go func() {
+// 		defer wg.Done()
+// 		_, _ = io.Copy(&stdout, stdoutPipe)
+// 	}()
+
+// 	go func() {
+// 		defer wg.Done()
+// 		_, _ = io.Copy(&stderr, stderrPipe)
+// 	}()
+
+// 	done := make(chan error, 1)
+
+// 	go func() {
+// 		done <- s.session.Wait()
+// 	}()
+
+// 	select {
+
+// 	case <-ctx.Done():
+
+// 		_ = s.session.Close()
+
+// 		result.Error = ctx.Err()
+
+// 	case err := <-done:
+
+// 		wg.Wait()
+
+// 		result.Output = stdout.String()
+
+// 		if err != nil {
+
+// 			if stderr.Len() > 0 {
+
+// 				result.Error = fmt.Errorf(
+// 					"%w: %s",
+// 					err,
+// 					stderr.String(),
+// 				)
+
+// 			} else {
+
+// 				result.Error = err
+// 			}
+// 		}
+// 	}
+
+// 	result.Duration = time.Since(start)
+
+// 	return result
+// }
 
 func (s *Session) Close() error {
 

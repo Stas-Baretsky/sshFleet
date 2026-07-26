@@ -45,5 +45,7 @@ func BuildConfig(
 		},
 		HostKeyCallback: callback,
 		Timeout:         cfg.Timeout,
+
+		ClientVersion: "SSH-2.0-OpenSSH_9.6p1",
 	}, nil
 }

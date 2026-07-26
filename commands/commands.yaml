@@ -1,2 +1,2 @@
 commands:
-  - show run
+  - show version
