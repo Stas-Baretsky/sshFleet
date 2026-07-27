@@ -125,6 +125,9 @@ func (s *Session) Run(
 		return result
 	}
 
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
 	err = s.session.Start(
 		command,
 	)
@@ -140,9 +143,6 @@ func (s *Session) Run(
 
 		return result
 	}
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
 
 	var wg sync.WaitGroup
 
@@ -183,10 +183,14 @@ func (s *Session) Run(
 	wait := make(chan error, 1)
 
 	go func() {
-
 		wait <- s.session.Wait()
-
 	}()
+	fmt.Printf(
+		"STDOUT=%q STDERR=%q ERR=%v\n",
+		stdout.String(),
+		stderr.String(),
+		err,
+	)
 
 	select {
 
@@ -204,6 +208,12 @@ func (s *Session) Run(
 			"command canceled: %w",
 			ctx.Err(),
 		)
+		fmt.Printf(
+			"STDOUT=%q STDERR=%q ERR=%v\n",
+			stdout.String(),
+			stderr.String(),
+			err,
+		)
 
 	case err := <-wait:
 
@@ -216,7 +226,6 @@ func (s *Session) Run(
 		result.Output = stdout.String()
 
 		if err != nil {
-
 			//
 			// Eltex:
 			//
@@ -224,13 +233,14 @@ func (s *Session) Run(
 			// отправляет stdout,
 			// но не отправляет SSH exit-status
 			//
+
 			if isMissingExitStatus(err) &&
 				result.Output != "" {
-
 				err = nil
 			}
-
+			result.Error = nil
 			if err != nil {
+				fmt.Print(err)
 
 				if stderr.Len() > 0 {
 

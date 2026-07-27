@@ -1,7 +1,61 @@
 ================================
 HOST: ELTEX_MES3508P
-COMMAND: show version
-DURATION: 59.503117ms
+COMMAND: help
+DURATION: 6.430641ms
+STATUS: SUCCESS
+OUTPUT:
+GNU bash, версия 5.2.21(1)-release (x86_64-pc-linux-gnu)
+Показанные ниже команды определены внутри командного процессора.  Чтобы вывести полный список, введите «help».
+Чтобы вывести справку по функции «name», введите «help name».
+Чтобы вывести справку по командному процессору, введите «info bash».
+Чтобы вывести справку по командам, которые отсутствуют в этом списке, введите «man -k» или «info».
+
+Звёздочка (*) рядом с названием команды означает, что эта команда отключена.
+
+ задание [&]                             history [-c] [-d смещение] [n] или h>
+ (( выражение ))                         if КОМАНДЫ; then КОМАНДЫ; [ elif КОМ>
+ . файл [аргументы]                      jobs [-lnprs] [задание ...] или jobs>
+ :                                       kill [-s назв_сигнала | -n номер_сиг>
+ [ аргумент... ]                         let аргумент [аргумент ...]
+ [[ выражение ]]                         local [параметр] имя[=значение] ...
+ alias [-p] [имя[=значение] ... ]        logout [n]
+ bg [задание ...]                        mapfile [-d разделитель] [-n число] >
+ bind [-lpvsPSVX] [-m раскладка] [-f ф>  popd [-n] [+N | -N]
+ break [n]                               printf [-v переменная] формат [аргум>
+ builtin [встр_команда [аргумент ...]>   pushd [-n] [+N | -N | каталог]
+ caller [выражение]                      pwd [-LP]
+ case СЛОВО in [ШАБЛОН [| ШАБЛОН]...) >  read [-ers] [-a массив] [-d разделит>
+ cd [-L|[-P [-e]] [-@]] [каталог]        readarray [-d разделитель] [-n число>
+ command [-pVv] команда [аргумент ...>   readonly [-aAf] [имя[=значение] ...]>
+ compgen [-abcdefgjksuv] [-o параметр]>  return [n]
+ complete [-abcdefgjksuv] [-pr] [-DEI]>  select ИМЯ [in СЛОВА ... ;] do КОМАН>
+ compopt [-o|+o параметр] [-DEI] [имя >  set [-abefhkmnptuvxBCEHPT] [-o optio>
+ continue [n]                            shift [n]
+ coproc [ИМЯ] команда [перенаправления>  shopt [-pqsu] [-o] [параметр ...]
+ declare [-aAfFgiIlnrtux] [name[=value>  source файл [аргументы]
+ dirs [-clpv] [+N] [-N]                  suspend [-f]
+ disown [-h] [-ar] [задание ... | pid >  test [выражение]
+ echo [-neE] [аргумент ...]              time [-p] конвейер
+ enable [-a] [-dnps] [-f файл] [имя ..>  times
+ eval [аргумент ...]                     trap [-lp] [[аргумент] сигнал ...]
+ exec [-cl] [-a имя] [команда [аргумен>  true
+ exit [n]                                type [-afptP] имя [имя ...]
+ export [-fn] [имя[=значение ...] или >  typeset [-aAfFgiIlnrtux] name[=value>
+ false                                   ulimit [-SHabcdefiklmnpqrstuvxPRT] [>
+ fc [-e редактор] [-lnr] [первая] [пос>  umask [-p] [-S] [режим]
+ fg [задание]                            unalias [-a] имя [имя ...]
+ for ИМЯ [in СЛОВА... ;] do КОМАНДЫ; d>  unset [-f] [-v] [-n] [имя ...]
+ for (( выраж1; выраж2; выраж3 )); do >  until COMMANDS; do COMMANDS-2; done
+ function ИМЯ { КОМАНДЫ ; } или ИМЯ ()>  переменные — имена и значения некото>
+ getopts строка_параметров имя [аргуме>  wait [-fn] [-p переменная] [идентифи>
+ hash [-lr] [-p путь] [-dt] [имя ...]    while COMMANDS; do COMMANDS-2; done
+ help [-dms] [шаблон ...]                { КОМАНДЫ ; }
+================================
+
+================================
+HOST: ELTEX_MES3508P
+COMMAND: help
+DURATION: 58.794934ms
 STATUS: FAILED
 ERROR: execute command: wait: remote command exited without exit status or exit signal
 ================================

@@ -1,5 +1,13 @@
 devices:
 
+  # - name: LocalhostSSH
+  #   address: 205.10.1.30
+  #   port: 22
+  #   username: vadim
+  #   tags:
+  #     - switch
+  #     - core
+
   - name: ELTEX_MES3508P
     address: 205.10.1.37
     port: 22
