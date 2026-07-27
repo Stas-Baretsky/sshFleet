@@ -3,6 +3,7 @@ ssh:
   timeout: 10s
   known_hosts: ~/.ssh/known_hosts
   strict_host_key_checking: true
+  pty: false
   auth:
     type: key
     private_key: ~/.ssh/eltex

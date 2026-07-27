@@ -4,30 +4,64 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"strings"
+	"sync"
 	"time"
 
 	gossh "golang.org/x/crypto/ssh"
 )
 
+type SessionOptions struct {
+	RequestPTY bool
+}
+
 type Session struct {
 	session *gossh.Session
-	host    string
+
+	host string
+
 	address string
+
+	options SessionOptions
 }
 
 type Result struct {
-	Host     string
-	Command  string
-	Output   string
-	Error    error
+	Host string
+
+	Command string
+
+	Output string
+
+	Error error
+
 	Duration time.Duration
+}
+
+func NewSession(
+	session *gossh.Session,
+	host string,
+	address string,
+	options SessionOptions,
+) *Session {
+
+	return &Session{
+
+		session: session,
+
+		host: host,
+
+		address: address,
+
+		options: options,
+	}
 }
 
 func (s *Session) Run(
 	ctx context.Context,
 	command string,
 ) Result {
+
 	start := time.Now()
 
 	result := Result{
@@ -35,179 +69,231 @@ func (s *Session) Run(
 		Command: command,
 	}
 
+	//
+	// PTY нужен только для оборудования,
+	// которое требует интерактивный терминал
+	//
+	if s.options.RequestPTY {
+
+		err := s.session.RequestPty(
+			"xterm",
+			120,
+			40,
+			gossh.TerminalModes{
+				gossh.ECHO: 0,
+			},
+		)
+
+		if err != nil {
+
+			result.Error = fmt.Errorf(
+				"request pty: %w",
+				err,
+			)
+
+			result.Duration = time.Since(start)
+
+			return result
+		}
+	}
+
+	stdoutPipe, err := s.session.StdoutPipe()
+
+	if err != nil {
+
+		result.Error = fmt.Errorf(
+			"stdout pipe: %w",
+			err,
+		)
+
+		result.Duration = time.Since(start)
+
+		return result
+	}
+
+	stderrPipe, err := s.session.StderrPipe()
+
+	if err != nil {
+
+		result.Error = fmt.Errorf(
+			"stderr pipe: %w",
+			err,
+		)
+
+		result.Duration = time.Since(start)
+
+		return result
+	}
+
+	err = s.session.Start(
+		command,
+	)
+
+	if err != nil {
+
+		result.Error = fmt.Errorf(
+			"start command: %w",
+			err,
+		)
+
+		result.Duration = time.Since(start)
+
+		return result
+	}
+
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	s.session.Stdout = &stdout
-	s.session.Stderr = &stderr
+	var wg sync.WaitGroup
 
-	done := make(chan error, 1)
+	wg.Add(2)
+
+	//
+	// Читаем stdout сразу после Start
+	//
+	go func() {
+
+		defer wg.Done()
+
+		_, _ = io.Copy(
+			&stdout,
+			stdoutPipe,
+		)
+
+	}()
+
+	//
+	// Читаем stderr параллельно
+	//
+	go func() {
+
+		defer wg.Done()
+
+		_, _ = io.Copy(
+			&stderr,
+			stderrPipe,
+		)
+
+	}()
+
+	//
+	// Ждем либо завершения команды,
+	// либо отмены контекста
+	//
+	wait := make(chan error, 1)
 
 	go func() {
-		done <- s.session.Run(
-			command,
-		)
+
+		wait <- s.session.Wait()
+
 	}()
 
 	select {
 
 	case <-ctx.Done():
+
 		//
-		// Прерываем выполнение команды
+		// Закрываем SSH канал
 		//
+
 		_ = s.session.Close()
 
-		err := <-done
+		wg.Wait()
+
+		result.Error = fmt.Errorf(
+			"command canceled: %w",
+			ctx.Err(),
+		)
+
+	case err := <-wait:
+
+		//
+		// ВАЖНО:
+		// сначала дочитываем stdout/stderr
+		//
+		wg.Wait()
+
+		result.Output = stdout.String()
 
 		if err != nil {
-			result.Error = fmt.Errorf(
-				"command canceled: %w",
-				ctx.Err(),
-			)
-		} else {
-			result.Error = ctx.Err()
-		}
 
-	case err := <-done:
-		if err != nil {
-			// Некоторые сетевые устройства (например, Eltex)
-			// не отправляют exit-status после exec.
-			// Если stderr пустой и stdout получен,
-			// считаем выполнение успешным.
-			if stderr.Len() == 0 &&
-				stdout.Len() > 0 &&
-				strings.Contains(err.Error(), "without exit status") {
+			//
+			// Eltex:
+			//
+			// ssh сервер выполняет команду,
+			// отправляет stdout,
+			// но не отправляет SSH exit-status
+			//
+			if isMissingExitStatus(err) &&
+				result.Output != "" {
 
 				err = nil
 			}
 
 			if err != nil {
+
 				if stderr.Len() > 0 {
-					result.Error = fmt.Errorf("%w: %s", err, stderr.String())
+
+					result.Error = fmt.Errorf(
+						"%w: %s",
+						err,
+						stderr.String(),
+					)
+
 				} else {
-					result.Error = fmt.Errorf("execute command: %w", err)
+
+					result.Error = fmt.Errorf(
+						"execute command: %w",
+						err,
+					)
+
 				}
+
 			}
+
 		}
+
 	}
+
+	fmt.Printf(
+		"STDOUT=%q STDERR=%q ERR=%v\n",
+		stdout.String(),
+		stderr.String(),
+		err,
+	)
+
 	result.Output = stdout.String()
+
 	result.Duration = time.Since(start)
 
 	return result
 }
 
-// func (s *Session) Run(ctx context.Context, command string) Result {
-// 	start := time.Now()
+func isMissingExitStatus(
+	err error,
+) bool {
 
-// 	result := Result{
-// 		Host:    s.host,
-// 		Command: command,
-// 	}
+	if err == nil {
 
-// 	out, err := s.session.CombinedOutput(command)
+		return false
 
-// 	result.Output = string(out)
-// 	result.Duration = time.Since(start)
+	}
 
-// 	if err != nil {
-// 		result.Error = err
-// 	}
+	return strings.Contains(
+		err.Error(),
+		"without exit status",
+	)
 
-// 	return result
-// }
-
-// func (s *Session) Run(
-// 	ctx context.Context,
-// 	command string,
-// ) Result {
-
-// 	start := time.Now()
-
-// 	result := Result{
-// 		Host:    s.host,
-// 		Command: command,
-// 	}
-
-// 	stdoutPipe, err := s.session.StdoutPipe()
-// 	if err != nil {
-// 		result.Error = fmt.Errorf("stdout pipe: %w", err)
-// 		return result
-// 	}
-
-// 	stderrPipe, err := s.session.StderrPipe()
-// 	if err != nil {
-// 		result.Error = fmt.Errorf("stderr pipe: %w", err)
-// 		return result
-// 	}
-
-// 	if err := s.session.Start(command); err != nil {
-// 		result.Error = fmt.Errorf("start command: %w", err)
-// 		return result
-// 	}
-
-// 	var stdout bytes.Buffer
-// 	var stderr bytes.Buffer
-
-// 	var wg sync.WaitGroup
-// 	wg.Add(2)
-
-// 	go func() {
-// 		defer wg.Done()
-// 		_, _ = io.Copy(&stdout, stdoutPipe)
-// 	}()
-
-// 	go func() {
-// 		defer wg.Done()
-// 		_, _ = io.Copy(&stderr, stderrPipe)
-// 	}()
-
-// 	done := make(chan error, 1)
-
-// 	go func() {
-// 		done <- s.session.Wait()
-// 	}()
-
-// 	select {
-
-// 	case <-ctx.Done():
-
-// 		_ = s.session.Close()
-
-// 		result.Error = ctx.Err()
-
-// 	case err := <-done:
-
-// 		wg.Wait()
-
-// 		result.Output = stdout.String()
-
-// 		if err != nil {
-
-// 			if stderr.Len() > 0 {
-
-// 				result.Error = fmt.Errorf(
-// 					"%w: %s",
-// 					err,
-// 					stderr.String(),
-// 				)
-
-// 			} else {
-
-// 				result.Error = err
-// 			}
-// 		}
-// 	}
-
-// 	result.Duration = time.Since(start)
-
-// 	return result
-// }
+}
 
 func (s *Session) Close() error {
 
 	if s.session == nil {
+
 		return nil
+
 	}
 
 	return s.session.Close()
+
 }

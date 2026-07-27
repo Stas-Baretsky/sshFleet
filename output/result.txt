@@ -1,0 +1,8 @@
+================================
+HOST: ELTEX_MES3508P
+COMMAND: show version
+DURATION: 59.503117ms
+STATUS: FAILED
+ERROR: execute command: wait: remote command exited without exit status or exit signal
+================================
+

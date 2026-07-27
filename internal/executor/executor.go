@@ -119,7 +119,11 @@ func (e *Executor) executeDevice(
 			return
 		default:
 		}
-		session, err := conn.NewSession()
+		session, err := conn.NewSession(
+			sshclient.SessionOptions{
+				RequestPTY: false,
+			},
+		)
 
 		if err != nil {
 			sendResult(

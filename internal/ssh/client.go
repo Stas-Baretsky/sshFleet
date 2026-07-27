@@ -104,39 +104,32 @@ func (c *Client) Connect(
 	}, nil
 }
 
-func (c *Connection) NewSession() (*Session, error) {
+func (c *Connection) NewSession(
+	options SessionOptions,
+) (*Session, error) {
 
 	session, err := c.client.NewSession()
 
 	if err != nil {
-		return nil, err
+
+		return nil, fmt.Errorf(
+			"create ssh session: %w",
+			err,
+		)
+
 	}
 
-	// err = session.RequestPty(
-	// 	"xterm",
-	// 	120,
-	// 	40,
-	// 	gossh.TerminalModes{
-	// 		gossh.ECHO: 0,
-	// 	},
-	// )
+	return NewSession(
 
-	// if err != nil {
-	// 	session.Close()
+		session,
 
-	// 	return nil, fmt.Errorf(
-	// 		"request pty: %w",
-	// 		err,
-	// 	)
-	// }
+		c.target.Name,
 
-	return &Session{
-		session: session,
-		host:    c.target.Name,
-		address: normalizeAddress(c.target),
-	}, nil
+		normalizeAddress(c.target),
+
+		options,
+	), nil
 }
-
 func (c *Connection) Close() error {
 	return c.client.Close()
 }

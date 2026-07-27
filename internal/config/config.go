@@ -14,13 +14,15 @@ type CommandConfig struct {
 }
 
 type SSHConfig struct {
-	User string `yaml:"user" env:"SSH_USER" env-required:"true"`
+	User string `yaml:"user"`
 
-	Timeout time.Duration `yaml:"timeout" env-default:"10s"`
+	Timeout time.Duration `yaml:"timeout"`
 
-	KnownHosts string `yaml:"known_hosts" env-default:"~/.ssh/known_hosts"`
+	KnownHosts string `yaml:"known_hosts"`
 
-	StrictHostKeyChecking bool `yaml:"strict_host_key_checking" env-default:"true"`
+	StrictHostKeyChecking bool `yaml:"strict_host_key_checking"`
+
+	PTY bool `yaml:"pty"`
 
 	Auth AuthConfig `yaml:"auth"`
 }
