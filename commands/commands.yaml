@@ -1,2 +1,3 @@
 commands:
-  - help
+  - show version
+  # - whoami

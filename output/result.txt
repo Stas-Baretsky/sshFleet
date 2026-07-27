@@ -1,8 +1,22 @@
 ================================
 HOST: ELTEX_MES3508P
-COMMAND: help
-DURATION: 54.176031ms
-STATUS: FAILED
-ERROR: execute command: wait: remote command exited without exit status or exit signal
+COMMAND: show version
+DURATION: 663.81565ms
+STATUS: SUCCESS
+OUTPUT:
+Active-image: flash://system/images/mes3300-4026-3R1.ros
+  Version: 4.0.26.3
+  Commit: 9ccd6c73
+  Build: 1 (master)
+  MD5 Digest: 3849fece5f6cd2ba43ed6a6cc63847b3
+  Date: 10-Mar-2026
+  Time: 09:02:21
+Inactive-image: flash://system/images/_image1.bin
+  Version: 4.0.13.9
+  Commit: d5fcaa6f
+  Build: 1 (master-4.0.13.9)
+  MD5 Digest: 0e8489e2681caaee63cc741f51d18403
+  Date: 29-May-2020
+  Time: 20:58:42
 ================================
 

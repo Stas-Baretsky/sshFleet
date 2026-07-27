@@ -73,6 +73,9 @@ func (s *Session) Run(
 	// PTY нужен только для оборудования,
 	// которое требует интерактивный терминал
 	//
+
+	defer s.session.Close()
+
 	if s.options.RequestPTY {
 
 		err := s.session.RequestPty(
@@ -96,6 +99,8 @@ func (s *Session) Run(
 			return result
 		}
 	}
+
+	stdinPipe, _ := s.session.StdinPipe()
 
 	stdoutPipe, err := s.session.StdoutPipe()
 
@@ -125,24 +130,14 @@ func (s *Session) Run(
 		return result
 	}
 
+	s.session.Start(command)
+
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 
-	err = s.session.Start(
-		command,
-	)
+	io.Copy(&stdout, stdoutPipe)
 
-	if err != nil {
-
-		result.Error = fmt.Errorf(
-			"start command: %w",
-			err,
-		)
-
-		result.Duration = time.Since(start)
-
-		return result
-	}
+	fmt.Fprintf(stdinPipe, "exit\n")
 
 	var wg sync.WaitGroup
 
@@ -185,12 +180,6 @@ func (s *Session) Run(
 	go func() {
 		wait <- s.session.Wait()
 	}()
-	fmt.Printf(
-		"STDOUT=%q STDERR=%q ERR=%v\n",
-		stdout.String(),
-		stderr.String(),
-		err,
-	)
 
 	select {
 
@@ -207,12 +196,6 @@ func (s *Session) Run(
 		result.Error = fmt.Errorf(
 			"command canceled: %w",
 			ctx.Err(),
-		)
-		fmt.Printf(
-			"STDOUT=%q STDERR=%q ERR=%v\n",
-			stdout.String(),
-			stderr.String(),
-			err,
 		)
 
 	case err := <-wait:
@@ -264,13 +247,6 @@ func (s *Session) Run(
 		}
 
 	}
-
-	fmt.Printf(
-		"STDOUT=%q STDERR=%q ERR=%v\n",
-		stdout.String(),
-		stderr.String(),
-		err,
-	)
 
 	result.Output = stdout.String()
 
