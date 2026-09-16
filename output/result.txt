@@ -1,8 +1,8 @@
 ================================
 HOST: ELTEX_MES3508P
-COMMAND: help
-DURATION: 54.176031ms
+COMMAND: 
+DURATION: 0s
 STATUS: FAILED
-ERROR: execute command: wait: remote command exited without exit status or exit signal
+ERROR: ssh handshake 205.10.1.37:22: ssh: handshake failed: EOF
 ================================
 
