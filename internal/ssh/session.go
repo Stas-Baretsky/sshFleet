@@ -255,6 +255,202 @@ func (s *Session) Run(
 	return result
 }
 
+// RunShell открывает один интерактивный PTY-канал на всё устройство
+// и последовательно "печатает" в него команды, как в реальном терминале.
+//
+// Нужен для оборудования (например Eltex), которое по exec-каналу
+// пускает только в режим exec и не позволяет войти в configure terminal:
+// там команда меняющая режим (configure terminal, username ... password ...)
+// обязана выполняться в рамках одной и той же сессии, а не в отдельном
+// exec-запросе на каждую команду.
+func (s *Session) RunShell(
+	ctx context.Context,
+	commands []string,
+	idleTimeout time.Duration,
+) []Result {
+
+	if idleTimeout <= 0 {
+		idleTimeout = 2 * time.Second
+	}
+
+	err := s.session.RequestPty(
+		"xterm",
+		200,
+		50,
+		gossh.TerminalModes{
+			gossh.ECHO: 1,
+		},
+	)
+
+	if err != nil {
+
+		return []Result{{
+			Host:  s.host,
+			Error: fmt.Errorf("request pty: %w", err),
+		}}
+	}
+
+	stdin, err := s.session.StdinPipe()
+
+	if err != nil {
+
+		return []Result{{
+			Host:  s.host,
+			Error: fmt.Errorf("stdin pipe: %w", err),
+		}}
+	}
+
+	stdout, err := s.session.StdoutPipe()
+
+	if err != nil {
+
+		return []Result{{
+			Host:  s.host,
+			Error: fmt.Errorf("stdout pipe: %w", err),
+		}}
+	}
+
+	if err := s.session.Shell(); err != nil {
+
+		return []Result{{
+			Host:  s.host,
+			Error: fmt.Errorf("start shell: %w", err),
+		}}
+	}
+
+	//
+	// done закрывается перед выходом из RunShell, чтобы читающая
+	// горутина не зависла навсегда, пытаясь отправить в outCh
+	// после того, как мы перестали читать
+	//
+	done := make(chan struct{})
+	defer close(done)
+
+	outCh := make(chan []byte)
+
+	go func() {
+
+		buf := make([]byte, 4096)
+
+		for {
+
+			n, readErr := stdout.Read(buf)
+
+			if n > 0 {
+
+				chunk := make([]byte, n)
+				copy(chunk, buf[:n])
+
+				select {
+				case outCh <- chunk:
+				case <-done:
+					return
+				}
+			}
+
+			if readErr != nil {
+				return
+			}
+		}
+	}()
+
+	//
+	// drain читает всё, что накопилось в outCh, пока не наступит
+	// idleTimeout тишины (устройство "замолчало" - команда отработала)
+	//
+	drain := func(timeout time.Duration) string {
+
+		var buf bytes.Buffer
+
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+
+		for {
+			select {
+
+			case chunk := <-outCh:
+
+				buf.Write(chunk)
+
+				if !timer.Stop() {
+					<-timer.C
+				}
+
+				timer.Reset(timeout)
+
+			case <-timer.C:
+
+				return buf.String()
+
+			case <-ctx.Done():
+
+				return buf.String()
+			}
+		}
+	}
+
+	//
+	// Дочитываем баннер логина/приглашение перед первой командой
+	//
+	drain(idleTimeout)
+
+	results := make([]Result, 0, len(commands))
+
+	for _, command := range commands {
+
+		select {
+		case <-ctx.Done():
+
+			results = append(results, Result{
+				Host:    s.host,
+				Command: command,
+				Error:   ctx.Err(),
+			})
+
+			return results
+
+		default:
+		}
+
+		start := time.Now()
+
+		_, writeErr := fmt.Fprintf(
+			stdin,
+			"%s\n",
+			command,
+		)
+
+		result := Result{
+			Host:    s.host,
+			Command: command,
+		}
+
+		if writeErr != nil {
+
+			result.Error = fmt.Errorf(
+				"write command: %w",
+				writeErr,
+			)
+
+			result.Duration = time.Since(start)
+
+			results = append(results, result)
+
+			return results
+		}
+
+		result.Output = drain(idleTimeout)
+		result.Duration = time.Since(start)
+
+		results = append(results, result)
+	}
+
+	_, _ = fmt.Fprint(stdin, "exit\n")
+	_ = stdin.Close()
+
+	return results
+}
+
 func isMissingExitStatus(
 	err error,
 ) bool {

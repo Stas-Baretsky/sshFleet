@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SSH Fleet</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        SSH&nbsp;Fleet
+      </div>
+
+      <button class="nav-item" data-tab="devices">Устройства</button>
+      <button class="nav-item" data-tab="commands">Команды</button>
+      <button class="nav-item" data-tab="output">
+        Вывод
+        <span class="nav-badge" id="nav-badge-output" hidden></span>
+      </button>
+      <button class="nav-item" data-tab="history">История</button>
+
+      <div class="sidebar-spacer"></div>
+
+      <button class="nav-item" data-tab="settings">Настройки</button>
+    </nav>
+
+    <main class="content">
+      <section id="tab-devices" class="tab"></section>
+      <section id="tab-commands" class="tab"></section>
+      <section id="tab-output" class="tab"></section>
+      <section id="tab-history" class="tab"></section>
+      <section id="tab-settings" class="tab"></section>
+    </main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+
+  <script src="./app.js"></script>
+</body>
+</html>

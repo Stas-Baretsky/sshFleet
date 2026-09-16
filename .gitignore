@@ -1,0 +1,13 @@
+# Собранные бинарники
+/desktop/sshfleet
+/desktop/build/bin/
+/cmd/main
+
+# Локальные данные приложения (если вдруг собраны рядом с проектом)
+/SSHFleet/
+
+# Результат desktop/package-linux.sh и desktop/package-windows.sh -
+# офлайн-дистрибутивы (сотни МБ, .deb-зависимости, WebView2 Runtime).
+# Собираются заново командой, не хранятся в репозитории.
+/dist/
+desktop/rsrc_windows_*.syso

@@ -12,14 +12,27 @@ import (
 )
 
 type Executor struct {
-	client  *sshclient.Client
-	workers int
-	retry   config.RetryConfig
+	client      *sshclient.Client
+	workers     int
+	retry       config.RetryConfig
+	pty         bool
+	idleTimeout time.Duration
+
+	//
+	// OnDeviceDone, если задан, вызывается ровно один раз на устройство,
+	// когда для него больше не будет результатов (успех, ошибка,
+	// отмена контекста - неважно). Нужен вызывающему коду (например GUI),
+	// чтобы узнать о завершении устройства, не полагаясь на подсчет
+	// количества полученных результатов - их может быть меньше, чем
+	// команд, если выполнение прервалось на середине (см. RunShell)
+	//
+	OnDeviceDone func(device inventory.Device)
 }
 
 func New(
 	client *sshclient.Client,
 	cfg config.ExecutorConfig,
+	sshCfg config.SSHConfig,
 ) *Executor {
 	workers := cfg.Workers
 
@@ -28,9 +41,11 @@ func New(
 	}
 
 	return &Executor{
-		client:  client,
-		workers: workers,
-		retry:   cfg.Retry,
+		client:      client,
+		workers:     workers,
+		retry:       cfg.Retry,
+		pty:         sshCfg.PTY,
+		idleTimeout: sshCfg.IdleTimeout,
 	}
 }
 
@@ -87,6 +102,8 @@ func (e *Executor) executeDevice(
 	results chan<- sshclient.Result,
 ) {
 
+	defer e.notifyDone(device)
+
 	target := sshclient.Target{
 		Name:    device.Name,
 		Address: device.Address,
@@ -111,6 +128,24 @@ func (e *Executor) executeDevice(
 		return
 	}
 	defer conn.Close()
+
+	//
+	// Интерактивный режим: одна PTY-сессия на устройство,
+	// команды выполняются последовательно в общем контексте
+	// (нужно, например, чтобы пройти в configure terminal)
+	//
+	if e.pty {
+
+		e.executeDeviceShell(
+			ctx,
+			conn,
+			device,
+			commands,
+			results,
+		)
+
+		return
+	}
 
 	for _, command := range commands {
 
@@ -148,6 +183,56 @@ func (e *Executor) executeDevice(
 			results,
 			result,
 		)
+	}
+}
+
+func (e *Executor) executeDeviceShell(
+	ctx context.Context,
+	conn *sshclient.Connection,
+	device inventory.Device,
+	commands []string,
+	results chan<- sshclient.Result,
+) {
+
+	session, err := conn.NewSession(
+		sshclient.SessionOptions{
+			RequestPTY: true,
+		},
+	)
+
+	if err != nil {
+		sendResult(
+			ctx,
+			results,
+			sshclient.Result{
+				Host:  device.Name,
+				Error: err,
+			},
+		)
+		return
+	}
+	defer session.Close()
+
+	for _, result := range session.RunShell(
+		ctx,
+		commands,
+		e.idleTimeout,
+	) {
+
+		sendResult(
+			ctx,
+			results,
+			result,
+		)
+	}
+}
+
+func (e *Executor) notifyDone(
+	device inventory.Device,
+) {
+
+	if e.OnDeviceDone != nil {
+		e.OnDeviceDone(device)
 	}
 }
 
