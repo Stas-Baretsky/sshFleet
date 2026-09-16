@@ -24,6 +24,13 @@ type SSHConfig struct {
 
 	PTY bool `yaml:"pty"`
 
+	//
+	// Таймаут тишины в интерактивной shell-сессии (режим pty: true):
+	// сколько ждать после отправки команды, прежде чем считать,
+	// что устройство закончило вывод и можно отправлять следующую
+	//
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"2s"`
+
 	Auth AuthConfig `yaml:"auth"`
 }
 
