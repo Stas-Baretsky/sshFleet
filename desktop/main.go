@@ -6,10 +6,14 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
+
+//go:embed build/appicon.png
+var appIcon []byte
 
 func main() {
 
@@ -28,6 +32,15 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+		},
+		Linux: &linux.Options{
+			Icon: appIcon,
+
+			//
+			// Совпадает со StartupWMClass в .desktop-файле,
+			// чтобы окно правильно матчилось с ярлыком приложения
+			//
+			ProgramName: "sshfleet",
 		},
 	})
 
